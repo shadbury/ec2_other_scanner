@@ -9,7 +9,7 @@ logs/
 reports/
 
 # Price data
-ebs_volumes/ebs.pyproducts.json
+ebs.pyproducts.json
 
 # Environment-specific
 *.env
