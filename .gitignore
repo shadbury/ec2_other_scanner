@@ -1,0 +1,38 @@
+# Python-specific
+__pycache__/
+*.py[cod]
+
+# Logs
+logs/
+
+# Reports
+reports/
+
+# Environment-specific
+*.env
+*.env.*
+
+# IDE and text editor files
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+
+# Compiled Python files
+*.pyc
+
+# Cache files
+*.cache
+
+# System and backup files
+.DS_Store
+Thumbs.db
+
+# Compiled binaries
+*.exe
+*.dll
+*.so
+*.dylib
+
+# Virtual environment
+venv/
