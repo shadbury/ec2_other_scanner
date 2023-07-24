@@ -2,8 +2,8 @@ import sys
 import pandas as pd
 import subprocess
 import os
-from logger import configure_logger
-from ebs_volumes.ebs import EbsVolumes
+from scanner.logger import configure_logger
+from scanner.ebs_volumes.ebs import EbsVolumes
 import boto3
 import time
 
