@@ -1,6 +1,6 @@
 import boto3
 import json
-from logger import get_logger
+from scanner.logger import get_logger
 
 logger = get_logger()
 
