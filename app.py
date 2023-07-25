@@ -7,6 +7,7 @@ from scanner.ebs_volumes.ebs import EbsVolumes
 import boto3
 import time
 
+
 # Configure the logger to send logs to the logger.py file
 logger = configure_logger("app.log")
 
@@ -22,10 +23,10 @@ def get_all_regions(profile):
     if regions is not None:
         for region in regions:
             try:
-                logger.info("Access to region successful: {}".format(region))
                 client = session.client("ec2", region_name=region)
                 client.describe_volumes()
                 successful_regions.append(region)
+                logger.info("Access to region successful: {}".format(region))
             except Exception as e:
                 logger.warning("Access to region failed: {}".format(region))
     return successful_regions
@@ -33,44 +34,68 @@ def get_all_regions(profile):
 
 def get_ebs_volumes(profile, region):
     """
-    Function to get EBS volumes for a specific region
+    Get EBS volumes for the given region.
     """
     try:
-        ebs_volumes = EbsVolumes(profile, region)
-        logger.info("Looking for Unused EBS Volumes in {}".format(region))
-        unused_volumes = ebs_volumes.get_unused_volumes()
-
-        return unused_volumes
+        return EbsVolumes(profile, region)
     except Exception as e:
-        logger.error(f"Error occurred in {region}: {str(e)}", exc_info=True)
+        logger.warning(f"Error fetching EBS volumes for region {region}: {str(e)}")
+        return None
+
+    
+def get_unused_volumes(profile, region):
+    '''
+    Get a dictionary of unused EBS volumes and their potential savings
+    '''
+    ebs_volumes = EbsVolumes(profile, region)
+    unused_volumes = ebs_volumes.get_unused_volumes()
+
+    if unused_volumes:
+        for volume_id, savings in unused_volumes.items():
+            volume = ebs_volumes.get_volume_by_id(volume_id)
+            if not volume['Attachments']:
+                logger.warning("Unused volumes found. Calculating potential savings...")
+                volume_type = volume['VolumeType']
+                volume_size = volume['Size']
+                # Default to 0.1 USD per GB if price not found
+                price_per_gb = ebs_volumes.volume_pricing.get(volume_type, 0.1)
+                savings = volume_size * price_per_gb
+                unused_volumes[volume_id] = savings
+        return ebs_volumes  # Return the EbsVolumes object
+    else:
+        pass
         return None
 
 
-def create_ebs_volumes_list(profile, regions):
+
+
+def create_unused_volumes_list(profile, regions):
     """
-    Function to create the array of EbsVolumes objects
+    Function to create the dictionary of EbsVolumes objects
     """
     logger.info("Getting list of EBS volumes...")
-    ebs_volumes_list = []
+    region_potential_savings = {}
     for region in regions:
         try:
-            ebs_volumes = get_ebs_volumes(profile, region)
-            if ebs_volumes: 
-                ebs_volumes_list.append((ebs_volumes, region))
-                logger.warning(f"{region}: {len(ebs_volumes)} volumes found.")
+            ebs_volumes = get_unused_volumes(profile, region)
+            if ebs_volumes and ebs_volumes.volumes:  # Check if ebs_volumes has volumes
+                region_potential_savings[region] = ebs_volumes  # Store the EbsVolumes object in the dictionary
+            else:
+                logger.info(f"{region}: No volumes found.")
         except Exception as e:
             logger.error(f"Error occurred in {region}: {str(e)}", exc_info=True)
-    return ebs_volumes_list
+    return region_potential_savings
+
 
 
 def get_potential_savings(profile, regions):
     """
     Function to get the potential savings from unused EBS volumes
     """
-    ebs_volumes_list = create_ebs_volumes_list(profile, regions)
+    ebs_volumes_list = create_unused_volumes_list(profile, regions)
     region_potential_savings = {}
-    for ebs_volumes, region in ebs_volumes_list:
-        unused_volumes_savings = ebs_volumes
+    for region, ebs_volumes in ebs_volumes_list.items():
+        unused_volumes_savings = ebs_volumes.get_unused_volumes()
         if unused_volumes_savings:
             logger.info("Mapping unused volumes to savings: {}".format(unused_volumes_savings))
             region_potential_savings[region] = unused_volumes_savings
@@ -78,35 +103,49 @@ def get_potential_savings(profile, regions):
     return region_potential_savings
 
 
-def create_ebs_volumes_dataframe(region_potential_savings):
+def create_ebs_volumes_dataframe(region_potential_savings, gp2_to_gp3_savings):
     """
     Function to create the dataframe of EBSVolumes objects
     """
     logger.info("Generating report...")
     if not region_potential_savings:
         logger.warning("No data to create dataframe.")
-        return None, None
-    logger.info("Transform data into dataframe: {}".format(region_potential_savings))
-    
-    # Create a list of EbsVolumes objects
+        return None
+
+    # Create a list of dictionaries for unused volumes
     ebs_volumes_list = []
     for region, ebs_volumes in region_potential_savings.items():
-        for ebs_volume in ebs_volumes:
+        for ebs_volume, savings in ebs_volumes.items():
             ebs_volume_data = {
                 "Region": region,
                 "ResourceType": "EBS Volume",
                 "VolumeId": ebs_volume,
                 "Findings": "Unused EBS Volume",
-                "MonthlySavings": f"${ebs_volumes[ebs_volume]:.2f}"
+                "MonthlySavings": f"${savings:.2f}"
             }
-            logger.info("EBS Volume: {}".format(ebs_volume_data))
             ebs_volumes_list.append(ebs_volume_data)
-        logger.info("Completed transformation into dataframe in region: {}".format(region))
-    logger.info("No more regions to check...")
-   # Create a dataframe from the list of dictionaries
-    ebs_volumes_dataframe = pd.DataFrame(ebs_volumes_list)
+
+    # Create a list of dictionaries for gp2 to gp3 savings
+    gp2_to_gp3_list = []
+    for region, gp2_to_gp3_savings_dict in gp2_to_gp3_savings.items():
+        for volume_id, estimated_savings in gp2_to_gp3_savings_dict.items():
+            gp2_to_gp3_data = {
+                "Region": region,
+                "ResourceType": "EBS Volume",
+                "VolumeId": volume_id,
+                "Findings": "GP2 to GP3 Savings",
+                "MonthlySavings": f"${estimated_savings:.2f}"
+            }
+            gp2_to_gp3_list.append(gp2_to_gp3_data)
+
+    # Combine the two lists
+    combined_list = ebs_volumes_list + gp2_to_gp3_list
+
+    logger.info("Transform data into dataframe...")
+    ebs_volumes_dataframe = pd.DataFrame(combined_list)
 
     return ebs_volumes_dataframe
+
 
 
 def save_report_to_csv(ebs_volumes_dataframe, output_file):
@@ -122,10 +161,16 @@ def save_report_to_csv(ebs_volumes_dataframe, output_file):
             os.makedirs(report_folder)
 
         csv_filepath = os.path.join(report_folder, output_file)
+
         df = pd.DataFrame(ebs_volumes_dataframe)
         df.to_csv(csv_filepath, index=False)
         logger.info(f"CSV report saved as {csv_filepath}")
-    time.sleep(5)
+
+        # Sleep for a few seconds before opening the CSV file
+        time.sleep(5)
+
+        # Open the CSV file with conditional formatting
+        open_files(csv_filepath)
 
 
 def open_files(csv_file_path):
@@ -152,35 +197,49 @@ def main():
         return
 
     profile = sys.argv[1]
+    region = sys.argv[2]
     try:
-         session = boto3.session.Session(profile_name=profile)
-         logger.info("Credentials loaded successfully")
+        session = boto3.session.Session(profile_name=profile)
+        logger.info("Credentials loaded successfully")
 
     except Exception as e:
-        if e ==  "ProfileNotFound":
-            logger.error(f"Error Occured: {str(e)}", exc_info=True)
+        if e == "ProfileNotFound":
+            logger.error(f"Error Occurred: {str(e)}", exc_info=True)
         else:
             logger.error(
                 f"Error occurred: AWS profile '{profile}' not found. Please check your credentials file (~/.aws/credentials)."
             )
         return
+
     try:
         # Get all available regions for the given profile
-        #regions = get_all_regions(profile)
-        regions = ["ap-southeast-2"]
+        if not region:
+            regions = get_all_regions(profile)
+        else:
+            regions = [region]
 
         # Create the array of EbsVolumes objects and get potential savings
         region_potential_savings = get_potential_savings(profile, regions)
 
+        # Get the estimated gp2 to gp3 savings
+        gp2_to_gp3_savings = {}
+        for region in regions:
+            ebs_volumes = get_ebs_volumes(profile, region)
+            if isinstance(ebs_volumes, EbsVolumes):  # Check if ebs_volumes is an instance of EbsVolumes
+                gp2_to_gp3_savings[region] = ebs_volumes.get_gp2_to_gp3_savings()
+            else:
+                logger.warning(f"{region}: ebs_volumes is not an instance of EbsVolumes.")
+
         # Create DataFrame from the results and save the report
-        ebs_volumes_dataframe = create_ebs_volumes_dataframe(region_potential_savings)
+        ebs_volumes_dataframe = create_ebs_volumes_dataframe(
+            region_potential_savings, gp2_to_gp3_savings)
 
         # Save the CSV report
         if ebs_volumes_dataframe is not None:
             # Save the CSV report for resources
             save_report_to_csv(ebs_volumes_dataframe, "ebs_volumes_report.csv")
 
-            
+            # Open the CSV file with conditional formatting
             open_files("reports/ebs_volumes_report.csv")
         else:
             logger.warning("No data to save.")

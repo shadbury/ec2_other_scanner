@@ -1,6 +1,6 @@
 # AWS EBS Volumes Analysis Tool
 
-The AWS EBS Volumes Analysis Tool is a Python application that allows you to analyze and identify potential cost savings from unused Amazon Elastic Block Store (EBS) volumes in your AWS account. The tool retrieves information about EBS volumes from multiple regions and generates a report indicating the potential savings for each unused volume.
+The AWS EBS Volumes Analysis Tool is a Python application that allows you to analyze and identify potential cost savings from unused Amazon Elastic Block Store (EBS) volumes in your AWS account. The tool retrieves information about EBS volumes from multiple regions and generates a report indicating the potential savings for each unused volume or gp2 volume.
 
 ## Table of Contents
 
@@ -36,7 +36,7 @@ pip install -r requirements.txt
 
 To run the AWS EBS Volumes Analysis Tool, execute the app.py script with your AWS profile as the first command-line argument:
 ```bash
-python app.py your_aws_profile
+python app.py your_aws_profile [optional_region]
 ```
 
 <b>Note:</b> Ensure that you have the AWS CLI configured with valid credentials and that your profile is accessible.
