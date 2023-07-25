@@ -22,14 +22,31 @@ The AWS EBS Volumes Analysis Tool is a Python application that allows you to ana
 1. Clone the repository to your local machine:
 
 ```bash
-git clone https://github.com/yourusername/aws-ebs-volumes-analysis.git
-cd aws-ebs-volumes-analysis
+git clone https://github.com/shadbury/ebs_other_scanner.git
+cd ebs_other_scanner
+
 ```
 
-1. Install the required Python packages using pip:
+2. Create and activate a virtual environment (recommended):
+
+```bash
+# On Windows
+python -m venv venv
+venv\Scripts\activate
+
+# On macOS and Linux
+python3 -m venv venv
+source venv/bin/activate
+
+```
+
+
+3. Install the required Python packages using pip:
 
 ```bash
 pip install -r requirements.txt
+
+
 ```
 
 ## Usage
