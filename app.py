@@ -15,6 +15,12 @@ logger = configure_logger("app.log")
 def get_all_regions(profile):
     """
     Function to get all available regions for the given profile
+
+    Args:
+        profile (str): AWS profile name
+
+    Returns:
+        list: List of regions
     """
     session = boto3.session.Session(profile_name=profile)
     regions = session.get_available_regions("ec2")
@@ -35,6 +41,13 @@ def get_all_regions(profile):
 def get_ebs_volumes(profile, region):
     """
     Get EBS volumes for the given region.
+
+    Args:
+        profile (str): AWS profile name
+        region (str): AWS region
+
+    Returns:
+        EbsVolumes: EbsVolumes object
     """
     try:
         return EbsVolumes(profile, region)
@@ -46,6 +59,13 @@ def get_ebs_volumes(profile, region):
 def get_unused_volumes(profile, region):
     '''
     Get a dictionary of unused EBS volumes and their potential savings
+
+    Args:
+        profile (str): AWS profile name
+        region (str): AWS region
+
+    Returns:
+        EbsVolumes: EbsVolumes object
     '''
     ebs_volumes = EbsVolumes(profile, region)
     unused_volumes = ebs_volumes.get_unused_volumes()
@@ -72,6 +92,13 @@ def get_unused_volumes(profile, region):
 def create_unused_volumes_list(profile, regions):
     """
     Function to create the dictionary of EbsVolumes objects
+
+    Args:
+        profile (str): AWS profile name
+        regions (list): List of AWS regions
+
+    Returns:
+        dict: Dictionary of EbsVolumes objects
     """
     logger.info("Getting list of EBS volumes...")
     region_potential_savings = {}
@@ -91,6 +118,13 @@ def create_unused_volumes_list(profile, regions):
 def get_potential_savings(profile, regions):
     """
     Function to get the potential savings from unused EBS volumes
+
+    Args:
+        profile (str): AWS profile name
+        regions (list): List of AWS regions
+
+    Returns:
+        dict: Dictionary of unused EBS volumes and their potential savings
     """
     ebs_volumes_list = create_unused_volumes_list(profile, regions)
     region_potential_savings = {}
@@ -106,6 +140,13 @@ def get_potential_savings(profile, regions):
 def create_ebs_volumes_dataframe(region_potential_savings, gp2_to_gp3_savings):
     """
     Function to create the dataframe of EBSVolumes objects
+
+    Args:
+        region_potential_savings (dict): Dictionary of EbsVolumes objects
+        gp2_to_gp3_savings (dict): Dictionary of gp2 to gp3 savings
+
+    Returns:
+        DataFrame: DataFrame of EBSVolumes objects
     """
     logger.info("Generating report...")
     if not region_potential_savings:
@@ -151,6 +192,13 @@ def create_ebs_volumes_dataframe(region_potential_savings, gp2_to_gp3_savings):
 def save_report_to_csv(ebs_volumes_dataframe, output_file):
     """
     Function to save the report as a CSV file
+
+    Args:
+        ebs_volumes_dataframe (DataFrame): DataFrame of EBSVolumes objects
+        output_file (str): Output file name
+
+    Returns:
+        None
     """
     logger.info("Saving report...")
     if ebs_volumes_dataframe is None:
@@ -176,6 +224,12 @@ def save_report_to_csv(ebs_volumes_dataframe, output_file):
 def open_files(csv_file_path):
     """
     Function to open files
+
+    Args:
+        csv_file_path (str): CSV file path
+
+    Returns:
+        None
     """
     logger.info("Opening Report...")
     try:
