@@ -24,6 +24,13 @@ class EbsVolumes:
     def __init__(self, profile, region):
         '''
         Initialise the class
+
+        Args:
+            profile (str): AWS profile name
+            region (str): AWS region
+
+        Returns:
+            None
         '''
         self.profile = profile
         self.region = region
@@ -40,6 +47,12 @@ class EbsVolumes:
     def get_pricing_info():
         '''
         Fetch the pricing information for EBS volumes
+
+        Args:
+            None
+
+        Returns:
+            None
         '''
         logger.info("Getting Pricing Information...")
 
@@ -115,6 +128,12 @@ class EbsVolumes:
     def get_unused_volumes(self):
         '''
         Get a dictionary of unused EBS volumes and their potential savings
+
+        Args:
+            None
+
+        Returns:
+            dict: Dictionary of unused EBS volumes and their potential savings
         '''
         unused_volumes = {}
         if self.volumes:
@@ -134,12 +153,25 @@ class EbsVolumes:
     def set_volume_pricing(volume_type, price):
         '''
         Set the pricing for the given volume type
+
+        Args:
+            volume_type (str): Volume type
+            price (float): Price per GB
+
+        Returns:
+            None
         '''
         EbsVolumes.pricing_info[volume_type] = price
 
     def get_volumes(self):
         '''
         Get the EBS volumes for the given region
+
+        Args:
+            None
+
+        Returns:
+            list: List of EBS volumes
         '''
         try:
             session = boto3.Session(
@@ -155,6 +187,12 @@ class EbsVolumes:
     def get_gp2_to_gp3_savings(self):
         """
         Calculate the estimated gp2 to gp3 savings for each gp2 volume
+
+        Args:
+            None
+
+        Returns:
+            dict: Dictionary of gp2 to gp3 savings
         """
         gp2_to_gp3_savings = {}
         if self.volumes:
@@ -172,6 +210,12 @@ class EbsVolumes:
     def get_volume_by_id(self, volume_id):
         '''
         Get the EBS volume by its ID
+
+        Args:
+            volume_id (str): Volume ID
+
+        Returns:
+            dict: EBS volume
         '''
         if self.volumes:
             for volume in self.volumes:
