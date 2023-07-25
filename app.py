@@ -249,9 +249,12 @@ def main():
             "Error occurred: Please provide the AWS profile as the first command-line argument. Example: python3 app.py my_aws_profile"
         )
         return
-
+    
+    region = None
     profile = sys.argv[1]
-    region = sys.argv[2]
+
+    if len(sys.argv) == 3:
+        region = sys.argv[2]
     try:
         session = boto3.session.Session(profile_name=profile)
         logger.info("Credentials loaded successfully")
