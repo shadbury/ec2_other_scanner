@@ -46,7 +46,7 @@ def configure_logger(log_filename):
         logging.root.removeHandler(handler)
 
     # Create a logger
-    logger = logging.getLogger("my_logger")
+    logger = logging.getLogger("application_log")
     logger.setLevel(logging.DEBUG)
 
     formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
@@ -68,4 +68,4 @@ def configure_logger(log_filename):
 
 # Function to get the logger
 def get_logger():
-    return logging.getLogger("my_logger")
+    return logging.getLogger("application_log")
