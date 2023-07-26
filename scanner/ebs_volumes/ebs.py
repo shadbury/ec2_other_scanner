@@ -1,6 +1,6 @@
 import boto3
 import json
-from scanner.logger import get_logger
+from scanner.util.logger import get_logger
 import os
 
 logger = get_logger()
@@ -63,7 +63,6 @@ class EbsVolumes:
             session = boto3.Session(profile_name=None, region_name=pricing_region)
             pricing = session.client('pricing')
             json_dump = {}
-
             for ebs_code in EbsVolumes.ebs_name_map:
                 logger.info("Getting pricing for {}...".format(ebs_code))
                 response = pricing.get_products(
