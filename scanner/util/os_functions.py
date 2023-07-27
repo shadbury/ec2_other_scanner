@@ -34,10 +34,8 @@ def save_report_to_csv(input, output_file):
         # Sleep for a few seconds before opening the CSV file
         time.sleep(5)
 
-        # Open the CSV file with conditional formatting
-        open_files(csv_filepath)
 
-def open_files(csv_file_path):
+def open_file(csv_file_path):
     """
     Function to open files
 

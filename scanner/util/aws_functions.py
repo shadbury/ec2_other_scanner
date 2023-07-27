@@ -58,7 +58,7 @@ def get_price(profile, service_code, filters):
     session = get_aws_session(profile)
     pricing_client = session.client('pricing', region_name='us-east-1')
 
-    response = pricing_client.get_products(ServiceCode=service_code, Filters=filters, MaxResults=1)
+    response = pricing_client.get_products(ServiceCode=service_code, Filters=filters)
     return response
 
 

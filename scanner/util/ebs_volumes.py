@@ -153,7 +153,6 @@ def create_ebs_dataframe(dataframe):
 
     unused = dataframe['unused']
     gp2 = dataframe['gp2']
-    snapshots = dataframe['snapshots']
     logger.info("Generating report...")
     if not unused:
         logger.warning("No data to create dataframe.")
@@ -191,28 +190,8 @@ def create_ebs_dataframe(dataframe):
             gp2_to_gp3_list.append(gp2_to_gp3_data)
             total_savings += estimated_savings # Add savings to the total
 
-    snapshot_list = []
-    for region, snapshot_savings_dict in snapshots.items():
-        for snapshot in snapshot_savings_dict:
-            snapshot_cost = snapshot['CostUSD']
-            volume_id = snapshot['VolumeId']
-            snapshot_id = snapshot['SnapshotId']
-            age_days = snapshot['AgeDays']
-            findings = "Snapshot Cost"
-            resource_type = "EBS Snapshot"
-            snapshot_data = {
-                "Region": region,
-                "ResourceType": resource_type,
-                "VolumeId": volume_id,
-                "Findings": findings,
-                "MonthlySavings": f"${snapshot_cost:.2f}",
-                "Extra_Notes": "Snapshot ID: {} Snapshot Age: {} days".format(snapshot_id, age_days)
-            }
-            snapshot_list.append(snapshot_data)
-            total_savings += snapshot_cost # Add savings to the total
-
     # Combine the two lists
-    combined_list = ebs_volumes_list + gp2_to_gp3_list + snapshot_list
+    combined_list = ebs_volumes_list + gp2_to_gp3_list
 
     # Add a row for the total savings
     total_savings_row = {

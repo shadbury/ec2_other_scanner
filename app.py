@@ -2,8 +2,8 @@ import sys
 from scanner.util.logger import configure_logger
 from scanner.util.aws_functions import get_aws_session, get_all_regions
 from scanner.util.ebs_volumes import get_all_volumes, get_unused_volume_savings, create_ebs_dataframe, get_gp2_to_gp3_savings
-from scanner.util.os_functions import save_report_to_csv, open_files
-from scanner.util.ebs_snapshots import get_aws_snapshot_cost
+from scanner.util.os_functions import save_report_to_csv, open_file
+from scanner.util.ebs_snapshots import get_aws_snapshot_cost, create_snapshot_dataframe
 import time
 
 
@@ -60,15 +60,18 @@ def main():
             gp2_to_gp3_savings[region] = get_gp2_to_gp3_savings(ebs_volumes, region)
             snapshot_savings[region] = get_aws_snapshot_cost(profile, region)
 
-        dataframe = {
+
+        snapshot_dataframe = create_snapshot_dataframe(snapshot_savings)
+
+        ebs_dataframe = {
             "unused" : region_potential_savings, 
-            "gp2" : gp2_to_gp3_savings, 
-            "snapshots" : snapshot_savings}
+            "gp2" : gp2_to_gp3_savings
+            }
 
 
         # Create DataFrame from the results and save the report
         ebs_volumes_dataframe = create_ebs_dataframe(
-            dataframe)
+            ebs_dataframe)
         time.sleep(5)
 
         # Save the CSV report
@@ -76,8 +79,12 @@ def main():
             # Save the CSV report for resources
             save_report_to_csv(ebs_volumes_dataframe, "ebs_volumes_report.csv")
 
+            # Save Snapshots report to CSV
+            save_report_to_csv(snapshot_dataframe, "snapshots_report.csv")
+
             # Open the CSV file with conditional formatting
-            open_files("reports/ebs_volumes_report.csv")
+            open_file("reports/ebs_volumes_report.csv")
+            open_file("reports/snapshots_report.csv")
         else:
             logger.warning("No data to save.")
 
