@@ -102,3 +102,4 @@ def get_ebs_snapshots(profile, region):
     logger.debug('EBS Snapshots: {}'.format(response))
 
     return response
+

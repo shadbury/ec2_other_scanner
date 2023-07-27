@@ -3,6 +3,7 @@ import pandas as pd
 from datetime import datetime, timezone
 import scanner.util.logger as log
 
+
 logger = log.get_logger()
 
 def get_all_snapshots(profile, region):
@@ -54,7 +55,7 @@ def get_aws_snapshot_cost(profile, region):
         float: Total cost of EBS snapshots
     '''
 
-    # Get the list of all snapshots in the region
+    # Get all snapshots for the given region
     logger.info("Getting all snapshots...")
     snapshot_object = get_all_snapshots(profile, region)
     logger.debug("Snapshot object: {}".format(snapshot_object))
@@ -62,20 +63,25 @@ def get_aws_snapshot_cost(profile, region):
     logger.debug("Snapshots: {}".format(snapshots))
     snapshot_price_per_gb_month = snapshot_object.snapshot_pricing
     logger.debug("Snapshot price per GB per month: {}".format(snapshot_price_per_gb_month))
+
     # Collect information about snapshots and their costs
     snapshots_info = []
+    snapshots_by_volume = {}  # Dictionary to store snapshots by VolumeIdma
 
     logger.info("Calculating the cost of snapshots...")
     for snapshot in snapshots['Snapshots']:
         snapshot_age = get_snapshot_age(snapshot)
-        if snapshot_age > 365:
-            logger.debug("Snapshot age is greater than 365 days ({}). Adding to the list...".format(snapshot_age))
-            volume_size_gb = snapshot['VolumeSize']
-            snapshot_cost = volume_size_gb * snapshot_price_per_gb_month
+        volume_id = snapshot['VolumeId']
+
+        # Check if the volume ID is already in the snapshots_by_volume dictionary
+        if volume_id in snapshots_by_volume:
+            previous_snapshot = snapshots_by_volume[volume_id]
+            size_difference_gb = snapshot['VolumeSize'] - previous_snapshot['VolumeSize']
+            snapshot_cost = size_difference_gb * snapshot_price_per_gb_month
 
             snapshot_info = {
                 'SnapshotId': snapshot['SnapshotId'],
-                'VolumeId': snapshot['VolumeId'],
+                'VolumeId': volume_id,
                 'VolumeSize': snapshot['VolumeSize'],
                 'AgeDays': snapshot_age,
                 'CostUSD': snapshot_cost,
@@ -83,10 +89,17 @@ def get_aws_snapshot_cost(profile, region):
             }
             snapshots_info.append(snapshot_info)
             logger.debug("Snapshot info: {}".format(snapshot_info))
-        else:
-            logger.debug("Snapshot: {} age is less than 365 days.({}) Skipping...".format(snapshot['SnapshotId'], snapshot_age))
+
+        # Add the current snapshot to the snapshots_by_volume dictionary for future comparison
+        snapshots_by_volume[volume_id] = {
+            'VolumeSize': snapshot['VolumeSize'],
+            'SnapshotAge': snapshot_age
+        }
 
     return snapshots_info
+
+
+
 
 def create_snapshot_dataframe(snapshot_data):
     """
