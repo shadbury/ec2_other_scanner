@@ -2,7 +2,7 @@ import sys
 from scanner.util.logger import configure_logger
 from scanner.util.aws_functions import get_aws_session, get_all_regions
 from scanner.util.ebs_volumes import get_all_volumes, get_unused_volume_savings, create_ebs_dataframe, get_gp2_to_gp3_savings
-from scanner.util.os_functions import save_report_to_csv, open_file
+from scanner.util.os_functions import save_report_to_csv, open_file, clear_log_file
 from scanner.util.ebs_snapshots import get_aws_snapshot_cost, create_snapshot_dataframe
 import time
 
@@ -88,10 +88,18 @@ def main():
         else:
             logger.warning("No data to save.")
 
+        logger.warning("These are estimates and not actual cost savings that will occur if resources are cleaned up.")
+
+
     except Exception as e:
         # Include traceback information
         logger.error(f"Error occurred: {str(e)}", exc_info=True)
 
 
 if __name__ == "__main__":
+    # Define the path to the log file
+    log_file_path = "logs/app.log"
+
+    # Clear the log file at the beginning of the script
+    clear_log_file(log_file_path)
     main()

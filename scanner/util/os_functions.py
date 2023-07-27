@@ -3,6 +3,8 @@ import os
 import pandas as pd
 import time
 import subprocess
+import tkinter as tk
+from tkinter import messagebox
 
 logger = log.get_logger()
 
@@ -50,3 +52,9 @@ def open_file(csv_file_path):
         subprocess.run(["open", csv_file_path])
     except Exception as e:
         logger.error(f"Error occurred while opening files: {str(e)}")
+
+
+def clear_log_file(log_file_path):
+    """Clear the content of the log file."""
+    with open(log_file_path, 'w') as log_file:
+        log_file.write("")
