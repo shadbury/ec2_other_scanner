@@ -136,7 +136,7 @@ def get_unused_volume_savings(profile, regions):
                 "Savings" : float(savings)
                 }
             try:
-                logger.info("Mapping Unused Volume: {} to savings: {}".format(volume_id, savings))
+                logger.debug("Mapping Unused Volume: {} to savings: {}".format(volume_id, savings))
                 if not region in unused_potential_savings:
                     unused_potential_savings[region] = []
                 unused_potential_savings[region].insert(len(unused_potential_savings[region]), savings)
@@ -149,8 +149,14 @@ def get_unused_volume_savings(profile, regions):
 def create_ebs_dataframe(dataframe):
     """
     Function to create the dataframe of EBSVolumes objects
-    """
 
+    Args:
+        dataframe (dict): Dictionary of EBSVolumes objects
+
+    Returns:
+        pandas.DataFrame: Dataframe of EBSVolumes objects
+    """
+    logger.info("Creating dataframe...")
     unused = dataframe['unused']
     gp2 = dataframe['gp2']
     logger.info("Generating report...")
@@ -160,10 +166,11 @@ def create_ebs_dataframe(dataframe):
 
     # Create a list of dictionaries for unused volumes
     ebs_volumes_list = []
+    logger.info("Creating Unused Volumes dataframe...")
     total_savings = 0  # Initialize total savings
     for region, ebs_volumes in unused.items():
-        logger.info("Region: {}".format(region))
-        logger.info("Transforming data: {}...".format(ebs_volumes))
+        logger.debug("Region: {}".format(region))
+        logger.debug("Transforming data: {}...".format(ebs_volumes))
         for volume in ebs_volumes:
             ebs_volume_data = {
                 "Region": region,
@@ -172,14 +179,17 @@ def create_ebs_dataframe(dataframe):
                 "Findings": "Unused EBS Volume",
                 "MonthlySavings": f"${volume['Savings']:.2f}"
             }
-            logger.info("Transformed data: {}".format(ebs_volume_data))
+            logger.debug("Transformed data: {}".format(ebs_volume_data))
             ebs_volumes_list.append(ebs_volume_data)
             total_savings += volume['Savings'] # Add savings to the total
 
     # Create a list of dictionaries for gp2 to gp3 savings
     gp2_to_gp3_list = []
+    logger.info("Creating GP2 to GP3 Savings dataframe...")
     for region, gp2_to_gp3_savings_dict in gp2.items():
         for volume_id, estimated_savings in gp2_to_gp3_savings_dict.items():
+            logger.debug("Region: {}".format(region))
+            logger.debug("Transforming data: {}...".format(gp2_to_gp3_savings_dict))
             gp2_to_gp3_data = {
                 "Region": region,
                 "ResourceType": "EBS Volume",
@@ -187,11 +197,14 @@ def create_ebs_dataframe(dataframe):
                 "Findings": "GP2 to GP3 Savings",
                 "MonthlySavings": f"${estimated_savings:.2f}"
             }
+            logger.debug("Transformed data: {}".format(gp2_to_gp3_data))
             gp2_to_gp3_list.append(gp2_to_gp3_data)
             total_savings += estimated_savings # Add savings to the total
 
     # Combine the two lists
+    logger.info("combining lists...")
     combined_list = ebs_volumes_list + gp2_to_gp3_list
+    logger.debug('Combined list: {}'.format(combined_list))
 
     # Add a row for the total savings
     total_savings_row = {
@@ -201,6 +214,8 @@ def create_ebs_dataframe(dataframe):
         "Findings": "",
         "MonthlySavings": f"${total_savings:.2f}"
     }
+    logger.info("Adding total savings row...")
+    logger.debug("Total savings row: {}".format(total_savings_row))
     combined_list.append(total_savings_row)
 
     logger.info("Transform data into dataframe...")
