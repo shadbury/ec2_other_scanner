@@ -18,7 +18,7 @@ install:
 	. $(ACTIVATE_VENV) && pip install -r $(REQUIREMENTS)
 
 # Run the app with AWS profile and optional region arguments
-run:
+run: install
 	. $(ACTIVATE_VENV) && $(PYTHON) app.py $(PROFILE) $(REGION)
 
 # Clean up the virtual environment
