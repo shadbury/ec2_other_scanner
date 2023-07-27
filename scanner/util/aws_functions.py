@@ -5,7 +5,7 @@ import pandas as pd
 
 logger = log.get_logger()
 
-def get_all_regions(profile):
+def get_all_regions(profile, session):
     '''
     Function to get all available regions for the given profile
 
@@ -15,7 +15,6 @@ def get_all_regions(profile):
     Returns:
         list: List of regions
     '''
-    session = boto3.session.Session(profile_name=profile)
     regions = session.get_available_regions("ec2")
     successful_regions = []
 
@@ -45,7 +44,7 @@ def get_aws_session(profile):
     return boto3.session.Session(profile_name=profile)
 
 
-def get_price(service_code, filters):
+def get_price(profile, service_code, filters):
     '''
     Function to get the price for the given service code and filters
     
@@ -56,14 +55,15 @@ def get_price(service_code, filters):
     Returns:
         float: Price
     '''
-    pricing_client = boto3.client('pricing', region_name='us-east-1')
+    session = get_aws_session(profile)
+    pricing_client = session.client('pricing', region_name='us-east-1')
 
     response = pricing_client.get_products(ServiceCode=service_code, Filters=filters, MaxResults=1)
     return response
 
 
 
-def get_ebs_volumes(region):
+def get_ebs_volumes(profile, region):
     '''
     Function to get the EBS volumes for the given region
 
@@ -73,8 +73,24 @@ def get_ebs_volumes(region):
     Returns:
         list: List of EBS volumes
     '''
-
-    ec2 = boto3.client('ec2', region_name=region)
+    session = get_aws_session(profile)
+    ec2 = session.client('ec2', region_name=region)
     response = ec2.describe_volumes()
+
+    return response
+
+def get_ebs_snapshots(profile, region):
+    '''
+    Function to get the EBS snapshots for the given region
+
+    Args:
+        region (str): AWS region
+
+    Returns:
+        list: List of EBS snapshots
+    '''
+    session = get_aws_session(profile)
+    ec2 = session.client('ec2', region_name=region)
+    response = ec2.describe_snapshots(OwnerIds=['self'])
 
     return response

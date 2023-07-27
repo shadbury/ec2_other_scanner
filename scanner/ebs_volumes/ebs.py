@@ -41,8 +41,7 @@ class EbsVolumes:
             logger.debug("Price list already exists. Skipping...")
             self.volume_pricing = EbsVolumes.pricing_info
 
-    @staticmethod
-    def get_pricing_info():
+    def get_pricing_info(self):
         '''
         Fetch the pricing information for EBS volumes
 
@@ -73,7 +72,7 @@ class EbsVolumes:
                     ]
                 service_code='AmazonEC2'
 
-                price = get_price(service_code, filters)
+                price = get_price(self.profile, service_code, filters)
                 
                 for product in price['PriceList']:
                     product_json = json.loads(product)
@@ -146,7 +145,7 @@ class EbsVolumes:
         try:
             
 
-            self.volumes = get_ebs_volumes(region)
+            self.volumes = get_ebs_volumes(self.profile, region)
             self.volumes_fetched = True
             return self.volumes
         except Exception as e:

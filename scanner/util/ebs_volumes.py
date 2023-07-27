@@ -74,6 +74,7 @@ def get_unused_volume_savings(profile, regions):
             EbsVolumes: EbsVolumes object
         '''
         ebs_volumes = volumes.get_volumes(region)
+        unused_volumes = {}
         if ebs_volumes:
             for ebs in ebs_volumes['Volumes']:
                 volume_id = ebs['VolumeId']
@@ -83,8 +84,8 @@ def get_unused_volume_savings(profile, regions):
                     # Default to 0.1 USD per GB if price not found
                     price_per_gb = volumes.volume_pricing.get(volume_type, 0.1)
                     savings = volume_size * price_per_gb
-                    ebs_volumes[volume_id] = savings
-            return ebs_volumes  # Return the EbsVolumes object
+                    unused_volumes[volume_id] = savings
+            return unused_volumes  # Return the EbsVolumes object
         else:
             pass
             return None
@@ -108,7 +109,7 @@ def get_unused_volume_savings(profile, regions):
                 logger.info("Checking for volumes in {}...".format(region))
                 all_volumes = EbsVolumes(profile, region)
                 unused_volumes = get_unused_volumes_and_savings(all_volumes, region)
-                if len(unused_volumes['Volumes']) > 0:
+                if unused_volumes:
                     logger.warning("Unused volumes: {}".format(unused_volumes))
                     region_potential_savings[region] = unused_volumes
                 else:
@@ -126,11 +127,13 @@ def get_unused_volume_savings(profile, regions):
     
     for region, ebs_volumes in ebs_volumes_list.items():
         unused_volumes = ebs_volumes_list[region]
-        for volume in ebs_volumes['Volumes']:
-            volume_id = volume['VolumeId']
+        for volume in ebs_volumes.items():
+            volume_id = volume[0]
+            savings = volume[1]
+            
             savings = {
                 "VolumeId" : volume_id, 
-                "Savings" : float(unused_volumes[volume_id])
+                "Savings" : float(savings)
                 }
             try:
                 logger.info("Mapping Unused Volume: {} to savings: {}".format(volume_id, savings))
@@ -143,19 +146,23 @@ def get_unused_volume_savings(profile, regions):
     
 
 
-def create_ebs_volumes_dataframe(region_potential_savings, gp2_to_gp3_savings):
+def create_ebs_dataframe(dataframe):
     """
     Function to create the dataframe of EBSVolumes objects
     """
+
+    unused = dataframe['unused']
+    gp2 = dataframe['gp2']
+    snapshots = dataframe['snapshots']
     logger.info("Generating report...")
-    if not region_potential_savings:
+    if not unused:
         logger.warning("No data to create dataframe.")
         return None
 
     # Create a list of dictionaries for unused volumes
     ebs_volumes_list = []
     total_savings = 0  # Initialize total savings
-    for region, ebs_volumes in region_potential_savings.items():
+    for region, ebs_volumes in unused.items():
         logger.info("Region: {}".format(region))
         logger.info("Transforming data: {}...".format(ebs_volumes))
         for volume in ebs_volumes:
@@ -172,7 +179,7 @@ def create_ebs_volumes_dataframe(region_potential_savings, gp2_to_gp3_savings):
 
     # Create a list of dictionaries for gp2 to gp3 savings
     gp2_to_gp3_list = []
-    for region, gp2_to_gp3_savings_dict in gp2_to_gp3_savings.items():
+    for region, gp2_to_gp3_savings_dict in gp2.items():
         for volume_id, estimated_savings in gp2_to_gp3_savings_dict.items():
             gp2_to_gp3_data = {
                 "Region": region,
@@ -182,9 +189,30 @@ def create_ebs_volumes_dataframe(region_potential_savings, gp2_to_gp3_savings):
                 "MonthlySavings": f"${estimated_savings:.2f}"
             }
             gp2_to_gp3_list.append(gp2_to_gp3_data)
+            total_savings += estimated_savings # Add savings to the total
+
+    snapshot_list = []
+    for region, snapshot_savings_dict in snapshots.items():
+        for snapshot in snapshot_savings_dict:
+            snapshot_cost = snapshot['CostUSD']
+            volume_id = snapshot['VolumeId']
+            snapshot_id = snapshot['SnapshotId']
+            age_days = snapshot['AgeDays']
+            findings = "Snapshot Cost"
+            resource_type = "EBS Snapshot"
+            snapshot_data = {
+                "Region": region,
+                "ResourceType": resource_type,
+                "VolumeId": volume_id,
+                "Findings": findings,
+                "MonthlySavings": f"${snapshot_cost:.2f}",
+                "Extra_Notes": "Snapshot ID: {} Snapshot Age: {} days".format(snapshot_id, age_days)
+            }
+            snapshot_list.append(snapshot_data)
+            total_savings += snapshot_cost # Add savings to the total
 
     # Combine the two lists
-    combined_list = ebs_volumes_list + gp2_to_gp3_list
+    combined_list = ebs_volumes_list + gp2_to_gp3_list + snapshot_list
 
     # Add a row for the total savings
     total_savings_row = {
