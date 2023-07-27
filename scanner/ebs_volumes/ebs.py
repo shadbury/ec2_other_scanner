@@ -133,7 +133,7 @@ class EbsVolumes:
         '''
         EbsVolumes.pricing_info[volume_type] = price
 
-    def get_volumes(self):
+    def get_volumes(self, region):
         '''
         Get the EBS volumes for the given region
 
@@ -146,31 +146,8 @@ class EbsVolumes:
         try:
             
 
-            self.volumes = get_ebs_volumes()
+            self.volumes = get_ebs_volumes(region)
             self.volumes_fetched = True
             return self.volumes
         except Exception as e:
             logger.error('Error occurred while fetching EBS volumes: {}'.format(str(e)), exc_info=True)
-
-    def get_gp2_to_gp3_savings(self):
-        """
-        Calculate the estimated gp2 to gp3 savings for each gp2 volume
-
-        Args:
-            None
-
-        Returns:
-            dict: Dictionary of gp2 to gp3 savings
-        """
-        gp2_to_gp3_savings = {}
-        if self.volumes:
-            for volume in self.volumes:
-                if volume['VolumeType'] == 'gp2':
-                    logger.warning("GP2 volumes found. Calculating potential savings...")
-                    volume_size = volume['Size']
-                    gp2_price_per_gb = self.volume_pricing.get('gp2', 0.1)
-                    gp3_price_per_gb = self.volume_pricing.get('gp3', 0.08)
-                    gp2_savings = volume_size * gp2_price_per_gb
-                    gp3_savings = volume_size * gp3_price_per_gb
-                    gp2_to_gp3_savings[volume['VolumeId']] = gp2_savings - gp3_savings
-        return gp2_to_gp3_savings

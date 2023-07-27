@@ -1,12 +1,13 @@
 import scanner.util.logger as log
 from scanner.ebs_volumes.ebs import EbsVolumes
 import pandas as pd
-from collections import ChainMap
 
 
 logger = log.get_logger()
 
-def get_ebs_volumes(profile, region):
+volumes = []
+
+def get_all_volumes(profile, region):
     """
     Get EBS volumes for the given region.
 
@@ -22,6 +23,31 @@ def get_ebs_volumes(profile, region):
     except Exception as e:
         logger.warning(f"Error fetching EBS volumes for region {region}: {str(e)}")
         return None
+    
+
+def get_gp2_to_gp3_savings(ebs_volumes, region):
+    """
+    Calculate the estimated gp2 to gp3 savings for each gp2 volume
+
+    Args:
+        None
+
+    Returns:
+        dict: Dictionary of gp2 to gp3 savings
+    """
+    gp2_to_gp3_savings = {}
+    volumes = ebs_volumes.get_volumes(region)
+    if volumes:
+        for volume in volumes['Volumes']:
+            if volume['VolumeType'] == 'gp2':
+                logger.warning("GP2 volumes found. Calculating potential savings...")
+                volume_size = volume['Size']
+                gp2_price_per_gb = ebs_volumes.volume_pricing.get('gp2', 0.1)
+                gp3_price_per_gb = ebs_volumes.volume_pricing.get('gp3', 0.08)
+                gp2_savings = volume_size * gp2_price_per_gb
+                gp3_savings = volume_size * gp3_price_per_gb
+                gp2_to_gp3_savings[volume['VolumeId']] = gp2_savings - gp3_savings
+    return gp2_to_gp3_savings
 
     
 def get_unused_volume_savings(profile, regions):
@@ -36,7 +62,7 @@ def get_unused_volume_savings(profile, regions):
         dict: Dictionary of unused EBS volumes and their potential savings
     """
 
-    def get_unused_volumes_and_savings(volumes):
+    def get_unused_volumes_and_savings(volumes, region):
         '''
         Get a dictionary of unused EBS volumes and their potential savings
 
@@ -47,7 +73,7 @@ def get_unused_volume_savings(profile, regions):
         Returns:
             EbsVolumes: EbsVolumes object
         '''
-        ebs_volumes = volumes.get_volumes()
+        ebs_volumes = volumes.get_volumes(region)
         if ebs_volumes:
             for ebs in ebs_volumes['Volumes']:
                 volume_id = ebs['VolumeId']
@@ -79,9 +105,11 @@ def get_unused_volume_savings(profile, regions):
         region_potential_savings = {}
         for region in regions:
             try:
+                logger.info("Checking for volumes in {}...".format(region))
                 all_volumes = EbsVolumes(profile, region)
-                unused_volumes = get_unused_volumes_and_savings(all_volumes)
-                if unused_volumes:
+                unused_volumes = get_unused_volumes_and_savings(all_volumes, region)
+                if len(unused_volumes['Volumes']) > 0:
+                    logger.warning("Unused volumes: {}".format(unused_volumes))
                     region_potential_savings[region] = unused_volumes
                 else:
                     logger.info(f"{region}: No volumes found.")
@@ -94,26 +122,24 @@ def get_unused_volume_savings(profile, regions):
 
     ebs_volumes_list = get_unused_volumes_in_region(profile, regions)
     savings = {}
-    region_potential_savings = dict()
+    unused_potential_savings = {}
     
     for region, ebs_volumes in ebs_volumes_list.items():
         unused_volumes = ebs_volumes_list[region]
-        print(unused_volumes)
-        if len(unused_volumes) > 1:
-
-            for volume in ebs_volumes['Volumes']:
-                volume_id = volume['VolumeId']
-                savings = {
-                    "VolumeId" : volume_id, 
-                    "Savings" : float(unused[volume_id])
-                    }
-                try:
-                    logger.info("Mapping Unused Volume: {} to savings: {}".format(volume_id, savings))
-                    region_potential_savings[region] = savings
-                except Exception as e:
-                    logger.error(f"Error Occurred: {str(e)}", exc_info=True)
-    print(region_potential_savings)
-    return region_potential_savings
+        for volume in ebs_volumes['Volumes']:
+            volume_id = volume['VolumeId']
+            savings = {
+                "VolumeId" : volume_id, 
+                "Savings" : float(unused_volumes[volume_id])
+                }
+            try:
+                logger.info("Mapping Unused Volume: {} to savings: {}".format(volume_id, savings))
+                if not region in unused_potential_savings:
+                    unused_potential_savings[region] = []
+                unused_potential_savings[region].insert(len(unused_potential_savings[region]), savings)
+            except Exception as e:
+                logger.error(f"Error Occurred: {str(e)}", exc_info=True)
+    return unused_potential_savings
     
 
 
@@ -130,16 +156,19 @@ def create_ebs_volumes_dataframe(region_potential_savings, gp2_to_gp3_savings):
     ebs_volumes_list = []
     total_savings = 0  # Initialize total savings
     for region, ebs_volumes in region_potential_savings.items():
-        ebs_volumes = ebs_volumes[region]
-        ebs_volume_data = {
-            "Region": region,
-            "ResourceType": "EBS Volume",
-            "VolumeId": ebs_volumes['VolumeId'],
-            "Findings": "Unused EBS Volume",
-            "MonthlySavings": f"${ebs_volumes['Savings']:.2f}"
-        }
-        ebs_volumes_list.append(ebs_volume_data)
-        total_savings += ebs_volumes['Savings'] # Add savings to the total
+        logger.info("Region: {}".format(region))
+        logger.info("Transforming data: {}...".format(ebs_volumes))
+        for volume in ebs_volumes:
+            ebs_volume_data = {
+                "Region": region,
+                "ResourceType": "EBS Volume",
+                "VolumeId": volume['VolumeId'],
+                "Findings": "Unused EBS Volume",
+                "MonthlySavings": f"${volume['Savings']:.2f}"
+            }
+            logger.info("Transformed data: {}".format(ebs_volume_data))
+            ebs_volumes_list.append(ebs_volume_data)
+            total_savings += volume['Savings'] # Add savings to the total
 
     # Create a list of dictionaries for gp2 to gp3 savings
     gp2_to_gp3_list = []

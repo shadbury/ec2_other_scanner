@@ -63,7 +63,7 @@ def get_price(service_code, filters):
 
 
 
-def get_ebs_volumes():
+def get_ebs_volumes(region):
     '''
     Function to get the EBS volumes for the given region
 
@@ -74,7 +74,7 @@ def get_ebs_volumes():
         list: List of EBS volumes
     '''
 
-    ec2 = boto3.client('ec2')
+    ec2 = boto3.client('ec2', region_name=region)
     response = ec2.describe_volumes()
 
     return response
