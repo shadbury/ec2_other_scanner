@@ -23,10 +23,21 @@ def get_all_snapshots(profile, region):
 
 
 def get_snapshot_age(snapshot):
-    # Get the age of the snapshot in days
+    '''
+    Function to get the age of the given snapshot
+
+    Args:
+        snapshot (dict): Snapshot details
+
+    Returns:
+        int: Age of the snapshot in days
+    '''
     create_time = snapshot['StartTime']
+    logger.debug("Snapshot creation time: {}".format(create_time))
     current_time = datetime.now(timezone.utc)
+    logger.debug("Current time: {}".format(current_time))
     age = (current_time - create_time).days
+    logger.debug("Snapshot age: {}".format(age))
     return age
 
 
@@ -44,13 +55,17 @@ def get_aws_snapshot_cost(profile, region):
     '''
 
     # Get the list of all snapshots in the region
+    logger.info("Getting all snapshots...")
     snapshot_object = get_all_snapshots(profile, region)
+    logger.debug("Snapshot object: {}".format(snapshot_object))
     snapshots = snapshot_object.get_snapshots(region)
+    logger.debug("Snapshots: {}".format(snapshots))
     snapshot_price_per_gb_month = snapshot_object.snapshot_pricing
+    logger.debug("Snapshot price per GB per month: {}".format(snapshot_price_per_gb_month))
     # Collect information about snapshots and their costs
     snapshots_info = []
 
-    logger.info("Calculating the cost of EBS snapshots...")
+    logger.info("Calculating the cost of snapshots...")
     for snapshot in snapshots['Snapshots']:
         snapshot_age = get_snapshot_age(snapshot)
         if snapshot_age > 365:
@@ -69,7 +84,7 @@ def get_aws_snapshot_cost(profile, region):
             snapshots_info.append(snapshot_info)
             logger.debug("Snapshot info: {}".format(snapshot_info))
         else:
-            logger.info("Snapshot age is less than 365 days. Skipping...")
+            logger.debug("Snapshot: {} age is less than 365 days.({}) Skipping...".format(snapshot['SnapshotId'], snapshot_age))
 
     return snapshots_info
 
@@ -86,14 +101,13 @@ def create_snapshot_dataframe(snapshot_data):
 
     for region, snapshot_savings_dict in snapshot_data.items():
         for snapshot in snapshot_savings_dict:
+            logger.debug("Snapshot: {}".format(snapshot))
             snapshot_cost = snapshot['CostUSD']
             volume_id = snapshot.get('VolumeId', '')
             snapshot_id = snapshot.get('SnapshotId', '')
             age_days = snapshot.get('AgeDays', '')
             snapshot_size = snapshot.get('VolumeSize', '')
             description = snapshot.get('description', '')
-
-            logger.info("Transforing snapshot data...")
 
             snapshot_data = {
                 "Region": region,
@@ -121,6 +135,7 @@ def create_snapshot_dataframe(snapshot_data):
         "Findings": "",
         "MonthlySavings": f"${total_savings:.2f}"
     }
+    logger.debug("Total savings row: {}".format(total_savings_row))
     snapshot_list.append(total_savings_row)
 
     # Create a DataFrame for snapshots

@@ -57,8 +57,10 @@ def get_price(profile, service_code, filters):
     '''
     session = get_aws_session(profile)
     pricing_client = session.client('pricing', region_name='us-east-1')
+    logger.debug("Created pricing client: {}".format(pricing_client))
 
     response = pricing_client.get_products(ServiceCode=service_code, Filters=filters)
+    logger.debug("Pricing response: {}".format(response))
     return response
 
 
@@ -73,9 +75,12 @@ def get_ebs_volumes(profile, region):
     Returns:
         list: List of EBS volumes
     '''
+    logger.info("Getting EBS Volumes...")
     session = get_aws_session(profile)
+    logger.debug("Created session: {}".format(session))
     ec2 = session.client('ec2', region_name=region)
     response = ec2.describe_volumes()
+    logger.debug("EBS Volumes: {}".format(response))
 
     return response
 
@@ -89,8 +94,11 @@ def get_ebs_snapshots(profile, region):
     Returns:
         list: List of EBS snapshots
     '''
+    
     session = get_aws_session(profile)
+    logger.debug('Created session: {}'.format(session))
     ec2 = session.client('ec2', region_name=region)
     response = ec2.describe_snapshots(OwnerIds=['self'])
+    logger.debug('EBS Snapshots: {}'.format(response))
 
     return response
