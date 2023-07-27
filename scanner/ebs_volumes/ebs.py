@@ -52,50 +52,39 @@ class EbsVolumes:
             None
         '''
         logger.info("Getting Pricing Information...")
+        json_dump = {}
+        cache_file_path = os.path.join(os.path.dirname(__file__), "products.json")
 
-        try:
-            json_dump = {}
-            for ebs_code in EbsVolumes.ebs_name_map:
+        for ebs_code in self.ebs_name_map:
 
+            filters=[
+                {
+                'Type': 'TERM_MATCH',
+                'Field': 'volumeType',
+                'Value': self.ebs_name_map[ebs_code]
+                },
+                {
+                    'Type': 'TERM_MATCH',
+                    'Field': 'location',
+                    'Value': 'US East (N. Virginia)'
+                }
+                ]
+            service_code='AmazonEC2'
+            price = None
+
+            try:
                 logger.info("Getting pricing for {}...".format(ebs_code))
-                filters=[
-                        {
-                            'Type': 'TERM_MATCH',
-                            'Field': 'volumeType',
-                            'Value': EbsVolumes.ebs_name_map[ebs_code]
-                        },
-                        {
-                            'Type': 'TERM_MATCH',
-                            'Field': 'location',
-                            'Value': 'US East (N. Virginia)'
-                        }
-                    ]
-                service_code='AmazonEC2'
-
                 price = get_price(self.profile, service_code, filters)
-                
-                for product in price['PriceList']:
-                    product_json = json.loads(product)
-                    json_dump[product] = product
-                    product_attributes = product_json['product']['attributes']
-                    volume_type = product_attributes.get('volumeApiName')
-                    if volume_type:
-                        price_dimensions = product_json['terms']['OnDemand'].values()
-                        price_per_unit = list(price_dimensions)[0]['priceDimensions']
-                        for price_dimension_key in price_per_unit:
-                            price = price_per_unit[price_dimension_key]['pricePerUnit']['USD']
-                            EbsVolumes.set_volume_pricing(volume_type, float(price))
-                            logger.info("Pricing for {}: {}".format(volume_type, price))
-                        continue
+                with open(cache_file_path, "w") as outfile:
+                    json.dump(json_dump, outfile)
 
-            cache_file_path = os.path.join(os.path.dirname(__file__), "products.json")
-            with open(cache_file_path, "w") as outfile:
-                json.dump(json_dump, outfile)
+            except Exception as e:
+                logger.error(
+                    f"Error occurred while fetching pricing information: {str(e)}")
+                logger.info("Looking for pricing information in the local file...")
 
-        except Exception as e:
-            logger.error(
-                f"Error occurred while fetching pricing information: {str(e)}")
-            logger.info("Looking for pricing information in the local file...")
+
+
             try:
                 cache_file_path = os.path.join(os.path.dirname(__file__), "products.json")
                 with open(cache_file_path, "r") as infile:
