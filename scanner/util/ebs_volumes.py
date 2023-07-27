@@ -127,7 +127,7 @@ def get_unused_volume_savings(profile, regions):
     
     for region, ebs_volumes in ebs_volumes_list.items():
         unused_volumes = ebs_volumes_list[region]
-        for volume in ebs_volumes.items():
+        for volume in unused_volumes.items():
             volume_id = volume[0]
             savings = volume[1]
             

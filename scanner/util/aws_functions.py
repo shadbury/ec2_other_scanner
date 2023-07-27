@@ -80,7 +80,6 @@ def get_ebs_volumes(profile, region):
     logger.debug("Created session: {}".format(session))
     ec2 = session.client('ec2', region_name=region)
     response = ec2.describe_volumes()
-    logger.debug("EBS Volumes: {}".format(response))
 
     return response
 
@@ -99,7 +98,6 @@ def get_ebs_snapshots(profile, region):
     logger.debug('Created session: {}'.format(session))
     ec2 = session.client('ec2', region_name=region)
     response = ec2.describe_snapshots(OwnerIds=['self'])
-    logger.debug('EBS Snapshots: {}'.format(response))
 
     return response
 
