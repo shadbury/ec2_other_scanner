@@ -1,7 +1,7 @@
 import sys
 from scanner.util.logger import configure_logger
-from scanner.util.aws_functions import get_aws_session, get_all_regions
-from scanner.util.ebs_functions import get_ebs_volumes, get_unused_volume_savings, create_ebs_volumes_dataframe
+from scanner.util.aws_functions import get_aws_session, get_all_regions, get_ebs_volumes
+from scanner.util.ebs_volumes import get_ebs_volumes, get_unused_volume_savings, create_ebs_volumes_dataframe
 from scanner.util.os_functions import save_report_to_csv, open_files
 
 
