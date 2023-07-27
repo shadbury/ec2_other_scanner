@@ -29,33 +29,17 @@ cd ebs_other_scanner
 
 ```
 
-2. Create and activate a virtual environment (recommended):
+2. Create and activate a virtual environment:
 
 ```bash
-# On Windows
-python -m venv venv
-venv\Scripts\activate
-
-# On macOS and Linux
-python3 -m venv venv
-source venv/bin/activate
-
+make install
 ```
 
-
-3. Install the required Python packages using pip:
-
-```bash
-pip install -r requirements.txt
-
-
-```
 
 ## Usage
 
-To run the AWS EBS Volumes Analysis Tool, execute the app.py script with your AWS profile as the first command-line argument:
+To run the AWS EBS Volumes Analysis Tool, execute the make file with the below command:
 ```bash
-make install
 make run PROFILE=your_aws_profile REGION=optional_region
 ```
 
