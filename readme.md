@@ -2,6 +2,8 @@
 
 The AWS EBS Volumes Analysis Tool is a Python application that allows you to analyze and identify potential cost savings from unused Amazon Elastic Block Store (EBS) volumes in your AWS account. The tool retrieves information about EBS volumes from multiple regions and generates a report indicating the potential savings for each unused volume or gp2 volume.
 
+The tool will also attempt to get estimated costs of snapshots that are over 1 year old.
+
 ## Table of Contents
 
 - [Requirements](#requirements)
@@ -67,7 +69,7 @@ aws configure
 
 ## Output
 
-The application generates a CSV report named `ebs_volumes_report.csv` in the `reports folder`. The report provides information about unused EBS volumes in each region, including their unique IDs, volume types, and potential monthly savings.
+The application generates a CSV report named `ebs_volumes_report.csv` and `snapshot_report.csv` in the `reports folder`. The report provides information about unused EBS volumes in each region, including their unique IDs, volume types, and potential monthly savings.
 
 ## License
 
