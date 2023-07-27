@@ -42,6 +42,37 @@ def get_snapshot_age(snapshot):
     return age
 
 
+import boto3
+import logging
+
+# Set up logging
+logger = logging.getLogger(__name__)
+
+def get_all_snapshots(profile, region):
+    session = boto3.Session(profile_name=profile, region_name=region)
+    return session.client('ec2')
+
+def get_snapshot_age(snapshot):
+    '''
+    Function to get the age of the given snapshot
+
+    Args:
+        snapshot (dict): Snapshot details
+
+    Returns:
+        int: Age of the snapshot in days
+    '''
+    create_time = snapshot['StartTime']
+    logger.debug("Snapshot creation time: {}".format(create_time))
+    current_time = datetime.now(timezone.utc)
+    logger.debug("Current time: {}".format(current_time))
+    age = (current_time - create_time).days
+    logger.debug("Snapshot age: {}".format(age))
+    return age
+
+
+
+
 def get_aws_snapshot_cost(profile, region):
     '''
     Function to get the cost of EBS snapshots for the given region
@@ -51,7 +82,17 @@ def get_aws_snapshot_cost(profile, region):
         region (str): AWS region
 
     Returns:
-        list: List of EBS snapshots and their costs
+        list: List of dictionaries containing information about each EBS snapshot:
+            - 'SnapshotId': str
+            - 'VolumeId': str
+            - 'VolumeSize': int (in GB)
+            - 'AgeDays': int
+            - 'CostUSD': float (snapshot cost)
+            - 'description': str (snapshot description)
+            - 'RetentionPolicy': str (e.g., 'Keep Forever', '7 days', etc.)
+            - 'SnapshotFrequency': str (e.g., 'Daily', 'Weekly', etc.)
+            - 'SnapshotSizeChange': float (size change from the previous snapshot in GB)
+            - 'IsUnused': bool (True if snapshot is not associated with any AMI, False otherwise)
         float: Total cost of EBS snapshots
     '''
 
@@ -59,44 +100,63 @@ def get_aws_snapshot_cost(profile, region):
     logger.info("Getting all snapshots...")
     snapshot_object = get_all_snapshots(profile, region)
     logger.debug("Snapshot object: {}".format(snapshot_object))
-    snapshots = snapshot_object.get_snapshots(region)
-    logger.debug("Snapshots: {}".format(snapshots))
-    snapshot_price_per_gb_month = snapshot_object.snapshot_pricing
+    snapshots = snapshot_object.describe_snapshots(OwnerIds=['self'])
+    snapshot_price_per_gb_month = 0.05  # Set the appropriate snapshot price per GB per month
     logger.debug("Snapshot price per GB per month: {}".format(snapshot_price_per_gb_month))
 
     # Collect information about snapshots and their costs
     snapshots_info = []
-    snapshots_by_volume = {}  # Dictionary to store snapshots by VolumeIdma
+
+    logger.info("Sorting snapshots by creation time...")
+    sorted_snapshots = sorted(snapshots['Snapshots'], key=lambda s: s['StartTime'])
 
     logger.info("Calculating the cost of snapshots...")
-    for snapshot in snapshots['Snapshots']:
+    previous_snapshot = None
+
+    for snapshot in sorted_snapshots:
         snapshot_age = get_snapshot_age(snapshot)
         volume_id = snapshot['VolumeId']
 
-        # Check if the volume ID is already in the snapshots_by_volume dictionary
-        if volume_id in snapshots_by_volume:
-            previous_snapshot = snapshots_by_volume[volume_id]
-            size_difference_gb = snapshot['VolumeSize'] - previous_snapshot['VolumeSize']
-            snapshot_cost = size_difference_gb * snapshot_price_per_gb_month
+        if snapshot_age >= 365:
+            # If the snapshot is within 365 days and snapshot_age is not None, calculate its cost
+            if previous_snapshot is not None:
+                size_difference_gb = snapshot['VolumeSize'] - previous_snapshot['VolumeSize']
+                snapshot_cost = abs(size_difference_gb) * snapshot_price_per_gb_month
+                snapshot_cost = snapshot_cost/2
 
-            snapshot_info = {
-                'SnapshotId': snapshot['SnapshotId'],
-                'VolumeId': volume_id,
-                'VolumeSize': snapshot['VolumeSize'],
-                'AgeDays': snapshot_age,
-                'CostUSD': snapshot_cost,
-                'description': snapshot['Description']
-            }
-            snapshots_info.append(snapshot_info)
-            logger.debug("Snapshot info: {}".format(snapshot_info))
+                logger.info(f"SnapshotId: {snapshot['SnapshotId']}, "
+                            f"VolumeId: {volume_id}, "
+                            f"VolumeSize: {snapshot['VolumeSize']} GB, "
+                            f"AgeDays: {snapshot_age}, "
+                            f"SizeDifferenceGB: {size_difference_gb} GB, "
+                            f"CostUSD: {snapshot_cost} USD, "
+                            f"RetentionPolicy: Keep Forever, "  # Set the retention policy here
+                            f"SnapshotFrequency: Daily, "  # Set the snapshot frequency here
+                            f"SnapshotSizeChange: {size_difference_gb} GB, "
+                            f"IsUnused: True")  # Set the unused status here (True if unused)
 
-        # Add the current snapshot to the snapshots_by_volume dictionary for future comparison
-        snapshots_by_volume[volume_id] = {
-            'VolumeSize': snapshot['VolumeSize'],
-            'SnapshotAge': snapshot_age
-        }
+                snapshot_info = {
+                    'SnapshotId': snapshot['SnapshotId'],
+                    'VolumeId': volume_id,
+                    'VolumeSize': snapshot['VolumeSize'],
+                    'AgeDays': snapshot_age,
+                    'CostUSD': snapshot_cost,
+                    'description': snapshot.get('Description', ''),
+                    'RetentionPolicy': 'Keep Forever',  # You can set the retention policy here
+                    'SnapshotFrequency': 'Daily',  # You can set the snapshot frequency here
+                    'SnapshotSizeChange': size_difference_gb,
+                    'IsUnused': True,  # You can check if the snapshot is unused and set this flag accordingly
+                }
+                snapshots_info.append(snapshot_info)
+
+            # Update the previous_snapshot with the current snapshot
+            previous_snapshot = snapshot
+
+
 
     return snapshots_info
+
+
 
 
 

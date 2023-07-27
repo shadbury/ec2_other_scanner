@@ -51,7 +51,6 @@ class EbsVolumes:
         Returns:
             None
         '''
-        logger.info("Getting Pricing Information...")
         json_dump = {}
         cache_file_path = os.path.join(os.path.dirname(__file__), "products.json")
 
@@ -73,7 +72,6 @@ class EbsVolumes:
             price = None
 
             try:
-                logger.info("Getting pricing for {}...".format(ebs_code))
                 price = get_price(self.profile, service_code, filters)
                 with open(cache_file_path, "w") as outfile:
                     json.dump(json_dump, outfile)
