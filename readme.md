@@ -55,7 +55,8 @@ pip install -r requirements.txt
 
 To run the AWS EBS Volumes Analysis Tool, execute the app.py script with your AWS profile as the first command-line argument:
 ```bash
-python app.py your_aws_profile [optional_region]
+make install
+make run PROFILE=your_aws_profile REGION=optional_region
 ```
 
 <b>Note:</b> Ensure that you have the AWS CLI configured with valid credentials and that your profile is accessible.
