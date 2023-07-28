@@ -76,12 +76,28 @@ class EbsVolumes:
                 try:
                     
                     price = get_price(self.profile, service_code, filters)
+                    
+                    for product in price['PriceList']:
+                        product_json = json.loads(product)
+                        json_dump[product] = product
+                        product_attributes = product_json['product']['attributes']
+                        volume_type = product_attributes.get('volumeApiName')
+                        if volume_type:
+                            price_dimensions = product_json['terms']['OnDemand'].values()
+                            price_per_unit = list(price_dimensions)[0]['priceDimensions']
+                            for price_dimension_key in price_per_unit:
+                                price = price_per_unit[price_dimension_key]['pricePerUnit']['USD']
+                                EbsVolumes.set_volume_pricing(volume_type, float(price))
+                                logger.info("Pricing for {}: {}".format(volume_type, price))
+                            continue
+
+                    cache_file_path = os.path.join(os.path.dirname(__file__), "products.json")
                     with open(cache_file_path, "w") as outfile:
                         json.dump(json_dump, outfile)
 
                 except Exception as e:
                     logger.error(
-                        f"Error occurred while fetching pricing information: {str(e)}", exc_info=True)
+                        f"Error occurred while fetching pricing information: {str(e)}")
                     logger.info("Looking for pricing information in the local file...")
 
 
