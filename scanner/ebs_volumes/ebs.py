@@ -2,6 +2,7 @@ import json
 import scanner.util.logger as log
 from scanner.util.aws_functions import get_price, get_ebs_volumes
 import os
+import mmap
 
 logger = log.get_logger()
 
@@ -53,56 +54,58 @@ class EbsVolumes:
         '''
         json_dump = {}
         cache_file_path = os.path.join(os.path.dirname(__file__), "products.json")
+        if not os.path.exists(cache_file_path):
+            for ebs_code in self.ebs_name_map:
+            
 
-        for ebs_code in self.ebs_name_map:
-
-            filters=[
-                {
-                'Type': 'TERM_MATCH',
-                'Field': 'volumeType',
-                'Value': self.ebs_name_map[ebs_code]
-                },
-                {
+                filters=[
+                    {
                     'Type': 'TERM_MATCH',
-                    'Field': 'location',
-                    'Value': 'US East (N. Virginia)'
-                }
-                ]
-            service_code='AmazonEC2'
-            price = None
+                    'Field': 'volumeType',
+                    'Value': self.ebs_name_map[ebs_code]
+                    },
+                    {
+                        'Type': 'TERM_MATCH',
+                        'Field': 'location',
+                        'Value': 'US East (N. Virginia)'
+                    }
+                    ]
+                service_code='AmazonEC2'
+                price = None
 
-            try:
-                price = get_price(self.profile, service_code, filters)
-                with open(cache_file_path, "w") as outfile:
-                    json.dump(json_dump, outfile)
+                try:
+                    
+                    price = get_price(self.profile, service_code, filters)
+                    with open(cache_file_path, "w") as outfile:
+                        json.dump(json_dump, outfile)
 
-            except Exception as e:
-                logger.error(
-                    f"Error occurred while fetching pricing information: {str(e)}")
-                logger.info("Looking for pricing information in the local file...")
+                except Exception as e:
+                    logger.error(
+                        f"Error occurred while fetching pricing information: {str(e)}", exc_info=True)
+                    logger.info("Looking for pricing information in the local file...")
 
 
 
-            try:
-                cache_file_path = os.path.join(os.path.dirname(__file__), "products.json")
-                with open(cache_file_path, "r") as infile:
-                    products = json.load(infile)
-                    for product in products:
-                        product_json = json.loads(product)
-                        product_attributes = product_json['product']['attributes']
-                        volume_type = product_attributes.get('volumeApiName')
-                        if volume_type:
-                            price_dimensions = product_json['terms']['OnDemand'].values()
-                            price_per_unit = list(price_dimensions)[0]['priceDimensions']
-                            for price_dimension_key in price_per_unit:
-                                price = price_per_unit[price_dimension_key]['pricePerUnit']['USD']
-                                EbsVolumes.set_volume_pricing(volume_type, float(price))
-                                logger.info(
-                                    "Pricing for {}: {}".format(volume_type, price))
+        try:
+            cache_file_path = os.path.join(os.path.dirname(__file__), "products.json")
+            with open(cache_file_path, "r") as infile:
+                products = json.load(infile)
+                for product in products:
+                    product_json = json.loads(product)
+                    product_attributes = product_json['product']['attributes']
+                    volume_type = product_attributes.get('volumeApiName')
+                    if volume_type:
+                        price_dimensions = product_json['terms']['OnDemand'].values()
+                        price_per_unit = list(price_dimensions)[0]['priceDimensions']
+                        for price_dimension_key in price_per_unit:
+                            price = price_per_unit[price_dimension_key]['pricePerUnit']['USD']
+                            self.set_volume_pricing(volume_type, float(price))
+                            logger.info(
+                                "Pricing for {}: {}".format(volume_type, price))
                             continue
-            except Exception as e:
-                logger.error(
-                    f"Error occurred while fetching pricing information from the local file: {str(e)}", exc_info=True)
+        except Exception as e:
+            logger.error(
+                f"Error occurred while fetching pricing information from the local file: {str(e)}. Try removing the file and re-running the app", exc_info=True)
 
 
     @staticmethod

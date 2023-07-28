@@ -5,7 +5,7 @@ import pandas as pd
 
 logger = log.get_logger()
 
-def get_all_regions(profile, session):
+def get_all_regions(profile):
     '''
     Function to get all available regions for the given profile
 
@@ -15,6 +15,7 @@ def get_all_regions(profile, session):
     Returns:
         list: List of regions
     '''
+    session = get_aws_session(profile)
     regions = session.get_available_regions("ec2")
     successful_regions = []
 
