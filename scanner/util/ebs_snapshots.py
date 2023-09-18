@@ -2,6 +2,7 @@ from scanner.ebs_snapshots.snapshot import EBSSnapshots
 import pandas as pd
 from datetime import datetime, timezone
 import scanner.util.logger as log
+import boto3
 
 
 logger = log.get_logger()
@@ -41,12 +42,6 @@ def get_snapshot_age(snapshot):
     logger.debug("Snapshot age: {}".format(age))
     return age
 
-
-import boto3
-import logging
-
-# Set up logging
-logger = logging.getLogger(__name__)
 
 def get_all_snapshots(profile, region):
     session = boto3.Session(profile_name=profile, region_name=region)
@@ -171,8 +166,10 @@ def create_snapshot_dataframe(snapshot_data):
     total_savings = 0
 
     logger.info("Generating the snapshot dataframe...")
-
+    has_data = False
     for region, snapshot_savings_dict in snapshot_data.items():
+        if(snapshot_savings_dict != []):
+            has_data = True
         for snapshot in snapshot_savings_dict:
             logger.debug("Snapshot: {}".format(snapshot))
             snapshot_cost = snapshot['CostUSD']
@@ -212,6 +209,9 @@ def create_snapshot_dataframe(snapshot_data):
     snapshot_list.append(total_savings_row)
 
     # Create a DataFrame for snapshots
-    snapshot_dataframe = pd.DataFrame(snapshot_list)
+    if(has_data):
+        snapshot_dataframe = pd.DataFrame(snapshot_list)
+    else:
+        return None
 
     return snapshot_dataframe
