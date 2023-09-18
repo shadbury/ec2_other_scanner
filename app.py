@@ -76,16 +76,12 @@ def main():
 
         # Save the CSV report
         if ebs_volumes_dataframe is not None:
-            # Save the CSV report for resources
             save_report_to_csv(ebs_volumes_dataframe, "ebs_volumes_report.csv")
-
-            # Save Snapshots report to CSV
-            save_report_to_csv(snapshot_dataframe, "snapshots_report.csv")
-
-            # Open the CSV file with conditional formatting
             open_file("reports/ebs_volumes_report.csv")
+        if snapshot_dataframe is not None:
+            save_report_to_csv(snapshot_dataframe, "snapshots_report.csv")
             open_file("reports/snapshots_report.csv")
-        else:
+        if ebs_volumes_dataframe is None and snapshot_dataframe is None:
             logger.warning("No data to save.")
 
         logger.warning("These are estimates and not actual cost savings that will occur if resources are cleaned up.")

@@ -160,7 +160,7 @@ def create_ebs_dataframe(dataframe):
     unused = dataframe['unused']
     gp2 = dataframe['gp2']
     logger.info("Generating report...")
-    if not unused:
+    if not unused and not gp2:
         logger.warning("No data to create dataframe.")
         return None
 
