@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 import sys
 from scanner.util.logger import configure_logger
 from scanner.util.aws_functions import get_aws_session, get_all_regions
