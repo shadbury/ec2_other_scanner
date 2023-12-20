@@ -160,6 +160,7 @@ def create_ebs_dataframe(dataframe):
     unused = dataframe['unused']
     gp2 = dataframe['gp2']
     logger.info("Generating report...")
+    has_data = False
     if not unused and not gp2:
         logger.warning("No data to create dataframe.")
         return None
@@ -169,6 +170,7 @@ def create_ebs_dataframe(dataframe):
     logger.info("Creating Unused Volumes dataframe...")
     total_savings = 0  # Initialize total savings
     for region, ebs_volumes in unused.items():
+        has_data = True
         logger.debug("Region: {}".format(region))
         logger.debug("Transforming data: {}...".format(ebs_volumes))
         for volume in ebs_volumes:
@@ -177,17 +179,19 @@ def create_ebs_dataframe(dataframe):
                 "ResourceType": "EBS Volume",
                 "VolumeId": volume['VolumeId'],
                 "Findings": "Unused EBS Volume",
-                "MonthlySavings": f"${volume['Savings']:.2f}"
+                "MonthlySavings": f"${volume['Savings']/2:.2f}"
             }
             logger.debug("Transformed data: {}".format(ebs_volume_data))
             ebs_volumes_list.append(ebs_volume_data)
             total_savings += volume['Savings'] # Add savings to the total
+            
 
     # Create a list of dictionaries for gp2 to gp3 savings
     gp2_to_gp3_list = []
     logger.info("Creating GP2 to GP3 Savings dataframe...")
     for region, gp2_to_gp3_savings_dict in gp2.items():
         for volume_id, estimated_savings in gp2_to_gp3_savings_dict.items():
+            has_data = True
             logger.debug("Region: {}".format(region))
             logger.debug("Transforming data: {}...".format(gp2_to_gp3_savings_dict))
             gp2_to_gp3_data = {
@@ -219,6 +223,10 @@ def create_ebs_dataframe(dataframe):
     combined_list.append(total_savings_row)
 
     logger.info("Transform data into dataframe...")
-    ebs_volumes_dataframe = pd.DataFrame(combined_list)
-
+    
+    if(has_data):
+        ebs_volumes_dataframe = pd.DataFrame(combined_list)
+    else:
+        ebs_volumes_dataframe = None
+    
     return ebs_volumes_dataframe

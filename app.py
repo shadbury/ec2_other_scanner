@@ -78,6 +78,7 @@ def main():
 
         # Save the CSV report
         if ebs_volumes_dataframe is not None:
+            print(ebs_volumes_dataframe)
             save_report_to_csv(ebs_volumes_dataframe, "ebs_volumes_report.csv")
             open_file("reports/ebs_volumes_report.csv")
         if snapshot_dataframe is not None:

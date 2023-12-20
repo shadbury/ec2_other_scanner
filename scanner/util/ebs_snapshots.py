@@ -172,7 +172,7 @@ def create_snapshot_dataframe(snapshot_data):
             has_data = True
         for snapshot in snapshot_savings_dict:
             logger.debug("Snapshot: {}".format(snapshot))
-            snapshot_cost = snapshot['CostUSD']
+            snapshot_cost = snapshot['CostUSD']/2
             volume_id = snapshot.get('VolumeId', '')
             snapshot_id = snapshot.get('SnapshotId', '')
             age_days = snapshot.get('AgeDays', '')
